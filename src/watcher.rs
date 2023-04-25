@@ -1,4 +1,15 @@
+use std::process::Command;
+
 use inotify::{EventMask, Inotify, WatchMask};
+
+fn is_webcam_in_use() -> bool {
+    let output = Command::new("lsof")
+        .arg("/dev/video0")
+        .output()
+        .expect("Failed to execute command");
+
+    !output.stdout.is_empty()
+}
 
 pub async fn start() {
     let webcam_path = "/dev/video0";
@@ -17,7 +28,11 @@ pub async fn start() {
                 .expect("Error while reading events");
 
             for event in events {
-                // Handle eventi
+                if is_webcam_in_use() {
+                    println!("In use!")
+                } else {
+                    println!("Not used...")
+                }
                 if event.mask.contains(EventMask::CLOSE_NOWRITE) {
                     println!("Webcam CLOSE_NOWRITE {:?}", std::time::Instant::now());
                 }
