@@ -21,21 +21,17 @@ pub async fn start(webcam_state_tx: Sender<bool>) {
         .expect("Failed to add inotify watch");
     let mut webcam_in_use = false;
 
-    tokio::task::spawn(async move {
-        let mut buffer = [0; 1024];
-        loop {
-            let events = inotify
-                .read_events_blocking(&mut buffer)
-                .expect("Error while reading events");
+    let mut buffer = [0; 1024];
+    loop {
+        let events = inotify
+            .read_events_blocking(&mut buffer)
+            .expect("Error while reading events");
 
-            for _event in events {
-                if is_webcam_in_use() != webcam_in_use {
-                    webcam_in_use = !webcam_in_use;
-                    webcam_state_tx.send(webcam_in_use);
-                }
+        for _event in events {
+            if is_webcam_in_use() != webcam_in_use {
+                webcam_in_use = !webcam_in_use;
+                webcam_state_tx.send(webcam_in_use).expect("Unable to send");
             }
         }
-    })
-    .await
-    .ok();
+    }
 }
