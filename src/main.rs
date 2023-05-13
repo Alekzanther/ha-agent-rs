@@ -2,6 +2,7 @@
 // 2. register sensor -- https://developers.home-assistant.io/docs/api/native-app-integration/sensors
 // 3. check webcam status & update sensor
 // 4. profit, goto 3
+mod agent_state;
 mod connection;
 mod watcher;
 
