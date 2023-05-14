@@ -13,6 +13,7 @@ extern crate dotenv_codegen;
 use dotenv::dotenv;
 
 use connection::Session;
+use agent_state::Metadata;
 
 
 #[tokio::main]
@@ -23,6 +24,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let (webcam_state_tx, webcam_state_rx) = mpsc::channel::<bool>();
     let _webcam_watcher = tokio::spawn(watcher::start(webcam_state_tx));
     let mut connection = Session::connect(hass_url, hass_token).await?;
+    //let state = Metadata::init(""
 
     loop {
         let webcam_state = webcam_state_rx.recv().unwrap();

@@ -13,6 +13,8 @@ use url::Url;
 
 use serde_json::json;
 
+use crate::agent_state;
+
 pub struct Session {
     ws_stream: WebSocketStream<
         async_tungstenite::stream::Stream<
@@ -20,6 +22,8 @@ pub struct Session {
             TokioAdapter<tokio_native_tls::TlsStream<tokio::net::TcpStream>>,
         >,
     >,
+    hass_url: String,
+    hass_token: String,
 }
 
 impl Session {
@@ -45,7 +49,31 @@ impl Session {
         let response = ws_stream.next().await.ok_or("didn't receive anything");
         println!("Response: {:?}", response);
 
-        Ok(Self { ws_stream })
+        Ok(Self {
+            ws_stream,
+            hass_url: hass_url.to_string(),
+            hass_token: hass_token.to_string(),
+        })
+    }
+
+    pub async fn register(&mut self, metadata: agent_state::Metadata) -> Result<(), anyhow::Error> {
+        let message = Message::text(
+            json!({
+                "type": "register",
+                "app_id": metadata.device.app_id,
+                "app_name": metadata.device.app_name,
+                "app_version": metadata.device.app_version,
+                "device_name": metadata.device.device_name,
+                "manufacturer": metadata.device.manufacturer,
+                "model": metadata.device.model,
+                "os_name": metadata.device.os_name,
+                "os_version": metadata.device.os_version,
+                "supports_encryption": metadata.device.supports_encryption,
+            })
+            .to_string(),
+        );
+        self.ws_stream.send(message).await?;
+        Ok(())
     }
 
     pub async fn disconnect(&mut self) -> Result<(), anyhow::Error> {
