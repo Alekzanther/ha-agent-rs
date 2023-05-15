@@ -6,21 +6,6 @@ use users::{get_current_uid, get_user_by_uid};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Device { 
-    // {
-    //   "device_id": "ABCDEFGH",
-    //   "app_id": "awesome_home",
-    //   "app_name": "Awesome Home",
-    //   "app_version": "1.2.0",
-    //   "device_name": "Robbies iPhone",
-    //   "manufacturer": "Apple, Inc.",
-    //   "model": "iPhone X",
-    //   "os_name": "iOS",
-    //   "os_version": "iOS 10.12",
-    //   "supports_encryption": true,
-    //   "app_data": {
-    //     "push_notification_key": "abcdef"
-    //   }
-    // }
     pub device_id: String,
     pub app_id: String,
     pub app_name: String,

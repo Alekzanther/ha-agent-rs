@@ -3,6 +3,7 @@
 // 3. check webcam status & update sensor
 // 4. profit, goto 3
 
+use anyhow::{anyhow, Error};
 use async_tungstenite::tokio::{connect_async, TokioAdapter};
 use async_tungstenite::tungstenite::protocol::Message;
 use async_tungstenite::WebSocketStream;
@@ -11,7 +12,10 @@ use tokio_native_tls;
 use futures::{SinkExt, StreamExt};
 use url::Url;
 
-use serde_json::json;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+
+use reqwest::Client;
 
 use crate::agent_state;
 
@@ -26,8 +30,16 @@ pub struct Session {
     hass_token: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct HaMessage<T> {
+    #[serde(rename = "type")]
+    message_type: String,
+    #[serde(flatten)]
+    payload: T,
+}
+
 impl Session {
-    pub async fn connect(hass_url: &str, hass_token: &str) -> Result<Self, anyhow::Error> {
+    pub async fn connect(hass_url: &str, hass_token: &str) -> Result<Self, Error> {
         println!("Home-assistant URL: {}", hass_url);
         let url = Url::parse(format!("wss://{}/api/websocket", hass_url).as_str())?;
 
@@ -46,37 +58,48 @@ impl Session {
         ws_stream.send(message).await?;
 
         // Read the response message
-        let response = ws_stream.next().await.ok_or("didn't receive anything");
-        println!("Response: {:?}", response);
+        let response_json = ws_stream
+            .next()
+            .await
+            .ok_or("didn't receive anything")
+            .expect("Authentication")?;
+        let response: Value = serde_json::from_str(response_json.to_string().as_str())?;
 
-        Ok(Self {
-            ws_stream,
-            hass_url: hass_url.to_string(),
-            hass_token: hass_token.to_string(),
-        })
+        if response["type"] == "auth_ok" {
+            println!("Authenticated with {}", hass_url);
+
+            Ok(Self {
+                ws_stream,
+                hass_url: hass_url.to_string(),
+                hass_token: hass_token.to_string(),
+            })
+        } else {
+            Err(anyhow!("Authentication failed"))
+        }
     }
 
-    pub async fn register(&mut self, metadata: agent_state::Metadata) -> Result<(), anyhow::Error> {
-        let message = Message::text(
-            json!({
-                "type": "register",
-                "app_id": metadata.device.app_id,
-                "app_name": metadata.device.app_name,
-                "app_version": metadata.device.app_version,
-                "device_name": metadata.device.device_name,
-                "manufacturer": metadata.device.manufacturer,
-                "model": metadata.device.model,
-                "os_name": metadata.device.os_name,
-                "os_version": metadata.device.os_version,
-                "supports_encryption": metadata.device.supports_encryption,
-            })
-            .to_string(),
-        );
-        self.ws_stream.send(message).await?;
+    pub async fn register(&mut self, metadata: &mut agent_state::Metadata) -> Result<(), Error> {
+        let registration_json = json!(HaMessage {
+            message_type: "register".to_string(),
+            payload: &metadata.device
+        });
+        println!("json: {}", registration_json);
+        //use reqwest to register device with message
+        let client = reqwest::Client::new();
+        let response = client
+            .post(format!("https://{}/api/mobile_app/registrations", &self.hass_url))
+            .header("Authorization", format!("Bearer {}", self.hass_token))
+            .body(registration_json.to_string())
+            .send()
+            .await?;
+
+
+        println!("response: {:?}", response);
+        //let response: Value = serde_json::from_str(response_json.to_string().as_str())?;
         Ok(())
     }
 
-    pub async fn disconnect(&mut self) -> Result<(), anyhow::Error> {
+    pub async fn disconnect(&mut self) -> Result<(), Error> {
         self.ws_stream.close(None).await?;
         Ok(())
     }
