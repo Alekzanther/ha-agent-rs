@@ -29,6 +29,7 @@ async fn main() -> Result<(), anyhow::Error> {
     if !state.registered {
         println!("Registering device with {}", hass_url);
         session.register(&mut state).await?;
+        state.save_state(state_file)?;
     } else {
         println!("Device already registered with {}", hass_url);
     }
