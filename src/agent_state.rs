@@ -20,10 +20,10 @@ pub struct Device {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct WebSocketInfo {
-    pub cloudhook_url: String,
-    pub remote_ui_url: String,
-    pub secret: String,
-    pub webhook_id: String,
+    pub cloudhook_url: Option<String>,
+    pub remote_ui_url: Option<String>,
+    pub secret: Option<String>,
+    pub webhook_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -63,19 +63,22 @@ impl Metadata {
                         supports_encryption: false,
                     },
                     websocket_info: WebSocketInfo {
-                        cloudhook_url: "".to_string(),
-                        remote_ui_url: "".to_string(),
-                        secret: "".to_string(),
-                        webhook_id: "".to_string(),
+                        cloudhook_url: None,
+                        remote_ui_url: None,
+                        secret: None,
+                        webhook_id: None,
                     },
                 }
             }
         }
     }
 
-    pub fn save_state(state: Self, path: &str) -> Result<(), Error> {
-        let json = serde_json::to_string_pretty(&state)?;
+    pub fn save_state(&self, path: &str) -> Result<(), Error> {
+        println!("Serializing state");
+        let json = serde_json::to_string_pretty(&self)?;
+        println!("Writing state to {}", path);
         fs::write(path, json)?;
+        println!("Saved state to {}", path);
         Ok(())
     }
 
