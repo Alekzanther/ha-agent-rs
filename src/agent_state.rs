@@ -1,11 +1,11 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Error;
-use sys_info::{os_type, os_release, hostname};
+use sys_info::{hostname, os_release, os_type};
 use users::{get_current_uid, get_user_by_uid};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Device { 
+pub struct Device {
     pub device_id: String,
     pub app_id: String,
     pub app_name: String,
@@ -30,17 +30,16 @@ pub struct WebSocketInfo {
 pub struct Metadata {
     pub registered: bool,
     pub device: Device,
-    pub websocket_info: WebSocketInfo
+    pub websocket_info: WebSocketInfo,
 }
 
 impl Metadata {
     //init AgentMetadata
-    pub fn init(state_path: &str) -> Self { 
+    pub fn init(state_path: &str) -> Self {
         //if state_path is empty, return default values
         match Self::load_state(state_path) {
             Ok(state) => state,
             Err(_) => {
-
                 let os = os_type().unwrap_or_else(|_| String::from("Unknown OS"));
                 let os_version = os_release().unwrap_or_else(|_| String::from("Unknown OS version"));
                 let hostname = hostname().unwrap_or_else(|_| String::from("Unknown Hostname"));
@@ -63,14 +62,14 @@ impl Metadata {
                         os_version: os_version.to_string(),
                         supports_encryption: false,
                     },
-                    websocket_info: WebSocketInfo { 
+                    websocket_info: WebSocketInfo {
                         cloudhook_url: "".to_string(),
                         remote_ui_url: "".to_string(),
                         secret: "".to_string(),
                         webhook_id: "".to_string(),
                     },
                 }
-            },
+            }
         }
     }
 
