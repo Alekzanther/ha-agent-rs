@@ -93,10 +93,15 @@ impl Session {
             .send()
             .await?;
 
-
-        println!("response: {:?}", response);
-        //let response: Value = serde_json::from_str(response_json.to_string().as_str())?;
-        Ok(())
+        if response.status().is_success() {
+            metadata.websocket_info = response.json().await.expect("json");
+            metadata.registered = true;
+            println!("Registered device with Home Assistant");
+            Ok(())
+        } else {
+            println!("Failed to register device with Home Assistant");
+            Err(anyhow!("Authentication failed"))
+        }
     }
 
     pub async fn disconnect(&mut self) -> Result<(), Error> {
