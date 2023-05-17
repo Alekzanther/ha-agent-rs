@@ -18,8 +18,25 @@ pub struct Device {
     pub supports_encryption: bool,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Sensor {
+    #[serde(flatten)]
+    pub state: SensorState,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SensorState {
+    #[serde(rename = "state")]
+    pub value: bool,
+    pub unique_id: String,
+    #[serde(rename = "type")]
+    pub sensor_type: String,
+    pub icon: String,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
-pub struct WebSocketInfo {
+pub struct WebhookInfo {
     pub cloudhook_url: Option<String>,
     pub remote_ui_url: Option<String>,
     pub secret: Option<String>,
@@ -27,13 +44,14 @@ pub struct WebSocketInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Metadata {
+pub struct State {
     pub registered: bool,
     pub device: Device,
-    pub websocket_info: WebSocketInfo,
+    pub webhook_info: WebhookInfo,
+    pub sensors: Vec<Sensor>,
 }
 
-impl Metadata {
+impl State {
     //init AgentMetadata
     pub fn init(state_path: &str) -> Self {
         //if state_path is empty, return default values
@@ -47,6 +65,16 @@ impl Metadata {
                 let username = logged_in_user.name().to_str().unwrap();
 
                 let device_id = format!("{}@{}", username, hostname);
+
+                let webcam_sensor = Sensor {
+                    name: "Webcam".to_string(),
+                    state: SensorState {
+                        value: false,
+                        unique_id: "webcam".to_string(),
+                        sensor_type: "binary_sensor".to_string(),
+                        icon: "mdi:webcam".to_string(),
+                    },
+                };
 
                 Self {
                     registered: false,
@@ -62,21 +90,20 @@ impl Metadata {
                         os_version: os_version.to_string(),
                         supports_encryption: false,
                     },
-                    websocket_info: WebSocketInfo {
+                    webhook_info: WebhookInfo {
                         cloudhook_url: None,
                         remote_ui_url: None,
                         secret: None,
                         webhook_id: None,
                     },
+                    sensors: vec![webcam_sensor],
                 }
             }
         }
     }
 
     pub fn save_state(&self, path: &str) -> Result<(), Error> {
-        println!("Serializing state");
         let json = serde_json::to_string_pretty(&self)?;
-        println!("Writing state to {}", path);
         fs::write(path, json)?;
         println!("Saved state to {}", path);
         Ok(())
@@ -84,7 +111,16 @@ impl Metadata {
 
     pub fn load_state(path: &str) -> Result<Self, Error> {
         let json = fs::read_to_string(path)?;
-        let state: Metadata = serde_json::from_str(&json)?;
+        let state: State = serde_json::from_str(&json)?;
         Ok(state)
+    }
+
+    pub fn get_sensor_by_unique_id(&self, unique_id: &str) -> Option<Sensor> {
+        for sensor in &self.sensors {
+            if sensor.state.unique_id == unique_id {
+                return Some(sensor.clone());
+            }
+        }
+        None
     }
 }

@@ -2,7 +2,7 @@ use std::{process::Command, sync::mpsc::Sender};
 
 use inotify::{Inotify, WatchMask};
 
-fn is_webcam_in_use() -> bool {
+pub fn is_webcam_in_use() -> bool {
     let output = Command::new("lsof")
         .arg("/dev/video0")
         .output()

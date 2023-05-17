@@ -15,33 +15,64 @@ use url::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use reqwest::Client;
-
-use crate::agent_state;
+use crate::agent_state::{self, Sensor, WebhookInfo, SensorState};
 
 pub struct Session {
-    ws_stream: WebSocketStream<
+    pub ws_stream: WebSocketStream<
         async_tungstenite::stream::Stream<
             TokioAdapter<tokio::net::TcpStream>,
             TokioAdapter<tokio_native_tls::TlsStream<tokio::net::TcpStream>>,
         >,
     >,
-    hass_url: String,
+    hass_protocol: String,
+    hass_address: String,
     hass_token: String,
+    webhook_url: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct HaMessage<T> {
+struct RegisterDeviceMessage<T> {
     #[serde(rename = "type")]
     message_type: String,
     #[serde(flatten)]
     payload: T,
 }
 
+#[derive(Serialize, Deserialize)]
+struct SensorMessage<T> {
+    #[serde(rename = "type")]
+    message_type: String,
+    data: T,
+}
+
 impl Session {
-    pub async fn connect(hass_url: &str, hass_token: &str) -> Result<Self, Error> {
-        println!("Home-assistant URL: {}", hass_url);
-        let url = Url::parse(format!("wss://{}/api/websocket", hass_url).as_str())?;
+    fn calculate_webhook_url(&mut self, webhook_info: &WebhookInfo) -> String {
+        if let Some(cloudhook_url) = &webhook_info.cloudhook_url {
+            cloudhook_url.to_string()
+        } else if let Some(webhook_id) = &webhook_info.webhook_id {
+            if let Some(remote_ui_url) = &webhook_info.remote_ui_url {
+                format!(
+                    "{}://{}/api/webhook/{}",
+                    self.hass_protocol, remote_ui_url, webhook_id
+                )
+            } else {
+                format!(
+                    "{}://{}/api/webhook/{}",
+                    self.hass_protocol, self.hass_address, webhook_id
+                )
+            }
+        } else {
+            "".to_string()
+        }
+    }
+
+    pub fn update_webhook_url(&mut self, webhook_info: &WebhookInfo) {
+        self.webhook_url = self.calculate_webhook_url(webhook_info);
+    }
+
+    pub async fn connect(hass_protocol: &str, hass_address: &str, hass_token: &str) -> Result<Self, Error> {
+        println!("Home-assistant URL: {}", hass_address);
+        let url = Url::parse(format!("wss://{}/api/websocket", hass_address).as_str())?;
 
         // Then, use the `tungstenite` library to connect to the WebSocket URL
         let (mut ws_stream, _) = connect_async(url).await.expect("Failed to connect websocket");
@@ -66,36 +97,56 @@ impl Session {
         let response: Value = serde_json::from_str(response_json.to_string().as_str())?;
 
         if response["type"] == "auth_ok" {
-            println!("Authenticated with {}", hass_url);
+            println!("Authenticated with {}", hass_address);
 
             Ok(Self {
                 ws_stream,
-                hass_url: hass_url.to_string(),
+                hass_protocol: hass_protocol.to_string(),
+                hass_address: hass_address.to_string(),
                 hass_token: hass_token.to_string(),
+                webhook_url: "".to_string(),
             })
         } else {
             Err(anyhow!("Authentication failed"))
         }
     }
 
-    pub async fn register(&mut self, metadata: &mut agent_state::Metadata) -> Result<(), Error> {
-        let registration_json = json!(HaMessage {
+    pub async fn read_incoming(&mut self) -> Result<(), Error> {
+        while let Some(message) = self.ws_stream.next().await {
+            println!("Incoming message: {:?}", message);
+        }
+        Ok(())
+    }
+
+    pub async fn register(&mut self, state: &mut agent_state::State) -> Result<(), Error> {
+        self.register_device(state).await?;
+        self.update_webhook_url(&state.webhook_info);
+        self.register_sensors(state).await?;
+        Ok(())
+    }
+
+    async fn register_device(&mut self, state: &mut agent_state::State) -> Result<(), Error> {
+        let registration_json = json!(RegisterDeviceMessage {
             message_type: "register".to_string(),
-            payload: &metadata.device
+            payload: &state.device
         });
+
         println!("json: {}", registration_json);
         //use reqwest to register device with message
         let client = reqwest::Client::new();
         let response = client
-            .post(format!("https://{}/api/mobile_app/registrations", &self.hass_url))
+            .post(format!(
+                "{}://{}/api/mobile_app/registrations",
+                self.hass_protocol, self.hass_address
+            ))
             .header("Authorization", format!("Bearer {}", self.hass_token))
             .body(registration_json.to_string())
             .send()
             .await?;
 
         if response.status().is_success() {
-            metadata.websocket_info = response.json().await.expect("json");
-            metadata.registered = true;
+            state.webhook_info = response.json().await.expect("json");
+            state.registered = true;
             println!("Registered device with Home Assistant");
             Ok(())
         } else {
@@ -104,8 +155,49 @@ impl Session {
         }
     }
 
-    pub async fn disconnect(&mut self) -> Result<(), Error> {
-        self.ws_stream.close(None).await?;
+    async fn register_sensors(&mut self, state: &mut agent_state::State) -> Result<(), Error> {
+        let client = reqwest::Client::new();
+        for sensor in &state.sensors {
+            let registration_json = json!(SensorMessage {
+                message_type: "register_sensor".to_string(),
+                data: sensor.clone()
+            });
+            println!("json: {}", registration_json);
+            let response = client
+                .post(&self.webhook_url)
+                .body(registration_json.to_string())
+                .send()
+                .await?;
+
+            if response.status().is_success() {
+
+                println!("Registered sensor {}", sensor.state.unique_id);
+                println!("Registered sensor {:?}", response.text().await.expect("Sensor registration response"));
+            } else {
+                println!("Failed to register device with Home Assistant");
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn update_sensor(&mut self, sensors: Vec<SensorState>) -> Result<(), Error> {
+        let client = reqwest::Client::new();
+        let registration_json = json!(SensorMessage {
+            message_type: "update_sensor_states".to_string(),
+            data: sensors
+        });
+        println!("json: {}", registration_json);
+        let response = client
+            .post(&self.webhook_url)
+            .body(registration_json.to_string())
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            println!("Updated sensors {}", response.text().await.expect("Sensor update response"));
+        } else {
+            println!("Failed to update sensors {}", response.status());
+        }
         Ok(())
     }
 }
