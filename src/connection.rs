@@ -15,7 +15,7 @@ use url::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::agent_state::{self, Sensor, WebhookInfo, SensorState};
+use crate::agent_state::{self, SensorState, WebhookInfo};
 
 pub struct Session {
     pub ws_stream: WebSocketStream<
@@ -51,10 +51,7 @@ impl Session {
             cloudhook_url.to_string()
         } else if let Some(webhook_id) = &webhook_info.webhook_id {
             if let Some(remote_ui_url) = &webhook_info.remote_ui_url {
-                format!(
-                    "{}://{}/api/webhook/{}",
-                    self.hass_protocol, remote_ui_url, webhook_id
-                )
+                format!("{}://{}/api/webhook/{}", self.hass_protocol, remote_ui_url, webhook_id)
             } else {
                 format!(
                     "{}://{}/api/webhook/{}",
@@ -112,8 +109,21 @@ impl Session {
     }
 
     pub async fn read_incoming(&mut self) -> Result<(), Error> {
-        while let Some(message) = self.ws_stream.next().await {
-            println!("Incoming message: {:?}", message);
+        while let Some(msg) = self.ws_stream.next().await {
+            let msg = msg?; 
+            match msg {
+                Message::Ping(_) => {
+                    //respond to ping with pong
+                    self.ws_stream
+                        .send(Message::Pong(vec![]))
+                        .await?;
+                }
+                Message::Text(s) => {
+                    println!("Received message: {:?}", s);
+                    // Continue processing text message... in the future
+                }
+                _ => {} 
+            }
         }
         Ok(())
     }
@@ -170,9 +180,11 @@ impl Session {
                 .await?;
 
             if response.status().is_success() {
-
                 println!("Registered sensor {}", sensor.state.unique_id);
-                println!("Registered sensor {:?}", response.text().await.expect("Sensor registration response"));
+                println!(
+                    "Registered sensor {:?}",
+                    response.text().await.expect("Sensor registration response")
+                );
             } else {
                 println!("Failed to register device with Home Assistant");
             }
@@ -194,7 +206,10 @@ impl Session {
             .await?;
 
         if response.status().is_success() {
-            println!("Updated sensors {}", response.text().await.expect("Sensor update response"));
+            println!(
+                "Updated sensors {}",
+                response.text().await.expect("Sensor update response")
+            );
         } else {
             println!("Failed to update sensors {}", response.status());
         }

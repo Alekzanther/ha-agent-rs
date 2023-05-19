@@ -75,6 +75,15 @@ impl State {
                         icon: "mdi:webcam".to_string(),
                     },
                 };
+                let microphone_sensor = Sensor {
+                    name: "Microphone".to_string(),
+                    state: SensorState {
+                        value: false,
+                        unique_id: "microphone".to_string(),
+                        sensor_type: "binary_sensor".to_string(),
+                        icon: "mdi:microphone".to_string(),
+                    },
+                };
 
                 Self {
                     registered: false,
@@ -96,7 +105,7 @@ impl State {
                         secret: None,
                         webhook_id: None,
                     },
-                    sensors: vec![webcam_sensor],
+                    sensors: vec![webcam_sensor, microphone_sensor],
                 }
             }
         }

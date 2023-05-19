@@ -1,4 +1,5 @@
-use std::{process::Command, sync::mpsc::Sender};
+use std::{process::Command};
+use tokio::sync::watch::Sender;
 
 use inotify::{Inotify, WatchMask};
 

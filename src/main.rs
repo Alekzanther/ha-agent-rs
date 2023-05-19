@@ -4,9 +4,10 @@
 // 4. profit, goto 3
 mod agent_state;
 mod connection;
-mod watcher;
+mod monitor;
 
-use std::sync::mpsc;
+use tokio::sync::watch;
+use tokio::select;
 
 #[macro_use]
 extern crate dotenv_codegen;
@@ -14,6 +15,8 @@ use dotenv::dotenv;
 
 use agent_state::State;
 use connection::Session;
+use monitor::microphone;
+use monitor::webcam;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -22,10 +25,13 @@ async fn main() -> Result<(), anyhow::Error> {
     let hass_address = dotenv!("HASS_ADDRESS");
     let hass_token = dotenv!("HASS_TOKEN");
     let state_file = dotenv!("HAARS_FILE");
-    let (webcam_state_tx, webcam_state_rx) = mpsc::channel::<bool>();
-    let _webcam_watcher = tokio::spawn(watcher::start(webcam_state_tx));
+    let (webcam_state_tx, mut webcam_state_rx) = watch::channel::<bool>(false);
+    let (microphone_state_tx, mut microphone_state_rx) = watch::channel::<bool>(false);
+
     let mut session = Session::connect(hass_protocol, hass_address, hass_token).await?;
     let mut state = State::init(state_file);
+    tokio::spawn(webcam::start(webcam_state_tx));
+    tokio::spawn(microphone::start(microphone_state_tx));
 
     if !state.registered {
         println!("Registering device with {}", hass_address);
@@ -38,23 +44,44 @@ async fn main() -> Result<(), anyhow::Error> {
 
     //initial sensor update
     let mut webcam_sensor = state.get_sensor_by_unique_id("webcam").unwrap();
-    if watcher::is_webcam_in_use() {
+    if webcam::is_webcam_in_use() {
         webcam_sensor.state.value = true;
     }
     session.update_sensor(vec![webcam_sensor.state.clone()]).await?;
 
+    let mut microphone_sensor = state.get_sensor_by_unique_id("microphone").unwrap();
+    if microphone::is_microphone_in_use() {
+        microphone_sensor.state.value = true;
+    }
+    session.update_sensor(vec![microphone_sensor.state.clone()]).await?;
+
     println!("All good! Monitoring...");
     loop {
-        let webcam_state = webcam_state_rx.recv().unwrap();
-        if webcam_state {
-            webcam_sensor.state.value = true;
-            session.update_sensor(vec![webcam_sensor.state.clone()]).await?;
-        } else {
-            webcam_sensor.state.value = false;
-            session.update_sensor(vec![webcam_sensor.state.clone()]).await?;
+        select! {
+            // The unwrap() here will only panic if all senders have been dropped. This will
+            // not happen in normal operation.
+            _ = webcam_state_rx.changed() => {
+                let state = *webcam_state_rx.borrow();
+                if state != webcam_sensor.state.value {
+                    webcam_sensor.state.value = state;
+                    session.update_sensor(vec![webcam_sensor.state.clone()]).await.unwrap();
+                }
+            },
+            _ = microphone_state_rx.changed() => {
+                let state = *microphone_state_rx.borrow();
+                if state != microphone_sensor.state.value {
+                    microphone_sensor.state.value = state;
+                    session.update_sensor(vec![microphone_sensor.state.clone()]).await.unwrap();
+                }
+            },
+            result = session.read_incoming() => {
+                // Handle WebSocket message here
+                if result.is_err() {
+                    println!("Error reading incoming message: {:?}", result.err());
+                    continue;
+                }
+            },
+            else => continue,
         }
-        //read websocket messages... yes here... until I've figured out how to split mpsc/webscoket
-        //coms better
-        //session.read_incoming().await?;
     }
 }
