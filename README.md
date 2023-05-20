@@ -1,6 +1,6 @@
 # ha-agent-rs
 
-Hello there, code wranglers, digital cowboys, and Internet dwellers! Welcome to the whimsical, fantastical, and, most importantly, functional world of `ha-agent-rs`!
+Hello there, code wranglers, digital cowboys, and Internet dwellers! Welcome to the whimsical, fantastical, and, most importantly, **BLAZINGLY FAST** world of `ha-agent-rs`!
 
 ## What is ha-agent-rs? 🚀
 
