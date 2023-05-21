@@ -8,10 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  HASS_PROTOCOL: https
-  HASS_ADDRESS: www.example.com
-  HASS_TOKEN: so-secret-long-lived-token-string
-  HAARS_FILE: haars.json
 
 jobs:
   build:
@@ -20,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Set up .env
+      run: cp .env-example .env
     - name: Build
       run: cargo build --verbose
     - name: Run tests
