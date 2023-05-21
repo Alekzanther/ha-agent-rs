@@ -1,4 +1,4 @@
-name: Rust
+name: Tests
 
 on:
   push:
@@ -8,6 +8,10 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  HASS_PROTOCOL: https
+  HASS_ADDRESS: www.example.com
+  HASS_TOKEN: so-secret-long-lived-token-string
+  HAARS_FILE: haars.json
 
 jobs:
   build:
