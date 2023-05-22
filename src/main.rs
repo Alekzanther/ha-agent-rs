@@ -30,17 +30,23 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let mut session = Session::connect(hass_protocol, hass_address, hass_token).await?;
     let mut state = State::init(state_file);
-    tokio::spawn(webcam::start(webcam_state_tx));
-    tokio::spawn(microphone::start(microphone_state_tx));
-
     if !state.registered {
         println!("Registering device with {}", hass_address);
         session.register(&mut state).await?;
         state.save_state(state_file)?;
     } else {
-        session.update_webhook_url(&state.webhook_info);
         println!("Device already registered with {}", hass_address);
+        if state.device.app_version != env!("CARGO_PKG_VERSION") {
+            println!("Version mismatch - updating device with {}", hass_address);
+            state = State::new();
+            session.update_registration(&mut state).await?;
+            state.save_state(state_file)?;
+        }
+        session.update_webhook_url(&state.webhook_info);
     }
+
+    tokio::spawn(webcam::start(webcam_state_tx));
+    tokio::spawn(microphone::start(microphone_state_tx));
 
     //initial sensor update
     let mut webcam_sensor = state.get_sensor_by_unique_id("webcam").unwrap();

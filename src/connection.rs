@@ -110,34 +110,42 @@ impl Session {
 
     pub async fn read_incoming(&mut self) -> Result<(), Error> {
         while let Some(msg) = self.ws_stream.next().await {
-            let msg = msg?; 
+            let msg = msg?;
             match msg {
                 Message::Ping(_) => {
                     //respond to ping with pong
-                    self.ws_stream
-                        .send(Message::Pong(vec![]))
-                        .await?;
+                    self.ws_stream.send(Message::Pong(vec![])).await?;
                 }
                 Message::Text(s) => {
                     println!("Received message: {:?}", s);
                     // Continue processing text message... in the future
                 }
-                _ => {} 
+                _ => {}
             }
         }
         Ok(())
     }
 
+    pub async fn update_registration(&mut self, state: &mut agent_state::State) -> Result<(), Error> {
+        self.register_device(state, false).await?;
+        self.update_webhook_url(&state.webhook_info);
+        Ok(())
+    }
+
     pub async fn register(&mut self, state: &mut agent_state::State) -> Result<(), Error> {
-        self.register_device(state).await?;
+        self.register_device(state, true).await?;
         self.update_webhook_url(&state.webhook_info);
         self.register_sensors(state).await?;
         Ok(())
     }
 
-    async fn register_device(&mut self, state: &mut agent_state::State) -> Result<(), Error> {
+    async fn register_device(&mut self, state: &mut agent_state::State, new_registration: bool) -> Result<(), Error> {
         let registration_json = json!(RegisterDeviceMessage {
-            message_type: "register".to_string(),
+            message_type: if new_registration {
+                "register".to_string()
+            } else {
+                "update_registration".to_string()
+            },
             payload: &state.device
         });
 
