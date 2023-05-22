@@ -1,4 +1,4 @@
-# ha-agent-rs [![CI/CD](https://github.com/Alekzanther/ha-agent-rs/actions/workflows/tests.yml/badge.svg)](https://github.com/Alekzanther/ha-agent-rs/actions/workflows/tests.yml)
+# ha-agent-rs [![CI/CD](https://github.com/Alekzanther/ha-agent-rs/actions/workflows/tests.yml/badge.svg)](https://github.com/Alekzanther/ha-agent-rs/actions/workflows/ci-cd.yml)
 
 Hello there, code wranglers, digital cowboys, and Internet dwellers! Welcome to the whimsical, fantastical, and, most importantly, **BLAZINGLY FAST** world of `ha-agent-rs`!
 
