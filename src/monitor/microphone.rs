@@ -8,7 +8,7 @@ use tokio::time::sleep;
 pub fn is_microphone_in_use() -> bool {
     let microphone_matcher = "input";
     let output = Command::new("pactl")
-        .args(&["list", "short", "sources"])
+        .args(["list", "short", "sources"])
         .output()
         .expect("Failed to execute command");
 
