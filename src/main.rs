@@ -5,13 +5,10 @@
 mod agent_state;
 mod connection;
 mod monitor;
+mod config;
 
 use tokio::sync::watch;
 use tokio::select;
-
-#[macro_use]
-extern crate dotenv_codegen;
-use dotenv::dotenv;
 
 use agent_state::State;
 use connection::Session;
@@ -20,27 +17,23 @@ use monitor::webcam;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    dotenv().ok();
-    let hass_protocol = dotenv!("HASS_PROTOCOL");
-    let hass_address = dotenv!("HASS_ADDRESS");
-    let hass_token = dotenv!("HASS_TOKEN");
-    let state_file = dotenv!("HAARS_FILE");
+    let config = config::load_config();
     let (webcam_state_tx, mut webcam_state_rx) = watch::channel::<bool>(false);
     let (microphone_state_tx, mut microphone_state_rx) = watch::channel::<bool>(false);
 
-    let mut session = Session::connect(hass_protocol, hass_address, hass_token).await?;
-    let mut state = State::init(state_file);
+    let mut session = Session::connect(&config).await?;
+    let mut state = State::init(&config.state_file);
     if !state.registered {
-        println!("Registering device with {}", hass_address);
+        println!("Registering device with {}", &config.hass_url);
         session.register(&mut state).await?;
-        state.save_state(state_file)?;
+        state.save_state(&config.state_file)?;
     } else {
-        println!("Device already registered with {}", hass_address);
+        println!("Device already registered with {}", &config.hass_url);
         if state.device.app_version != env!("CARGO_PKG_VERSION") {
-            println!("Version mismatch - updating device with {}", hass_address);
+            println!("Version mismatch - updating device with {}", &config.hass_url);
             state = State::new();
             session.update_registration(&mut state).await?;
-            state.save_state(state_file)?;
+            state.save_state(&config.state_file)?;
         }
         session.update_webhook_url(&state.webhook_info);
     }

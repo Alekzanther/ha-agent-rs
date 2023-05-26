@@ -7,7 +7,6 @@ use anyhow::{anyhow, Error};
 use async_tungstenite::tokio::{connect_async, TokioAdapter};
 use async_tungstenite::tungstenite::protocol::Message;
 use async_tungstenite::WebSocketStream;
-use tokio_native_tls;
 
 use futures::{SinkExt, StreamExt};
 use url::Url;
@@ -16,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::agent_state::{self, SensorState, WebhookInfo};
+use crate::config::Config;
 
 pub struct Session {
     pub ws_stream: WebSocketStream<
@@ -67,7 +67,10 @@ impl Session {
         self.webhook_url = self.calculate_webhook_url(webhook_info);
     }
 
-    pub async fn connect(hass_protocol: &str, hass_address: &str, hass_token: &str) -> Result<Self, Error> {
+    pub async fn connect(config: &Config) -> Result<Self, Error> {
+        let hass_address = config.hass_url.host_str().ok_or(anyhow!("No host in URL"))?;
+        let hass_protocol = config.hass_url.scheme();
+        let hass_token = config.hass_token.clone();
         println!("Home-assistant URL: {}", hass_address);
         let url = Url::parse(format!("wss://{}/api/websocket", hass_address).as_str())?;
 
@@ -79,7 +82,7 @@ impl Session {
         let message = Message::text(
             json!({
                 "type": "auth",
-                "access_token": hass_token
+                "access_token": config.hass_token
             })
             .to_string(),
         );

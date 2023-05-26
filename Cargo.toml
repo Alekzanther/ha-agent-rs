@@ -22,3 +22,4 @@ inotify = "0.10.0"
 serde = { version = "1.0.163", features = ["derive"]}
 sys-info = "0.9.1"
 users = "0.11.0"
+structopt = "0.3.26"
