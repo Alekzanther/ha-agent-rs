@@ -53,7 +53,7 @@ pub struct State {
 
 impl State {
     pub fn new() -> Self {
-        let os = os_type().unwrap_or_else(|_| String::from("Unknown OS"));
+        let os_name = os_type().unwrap_or_else(|_| String::from("Unknown OS"));
         let os_version = os_release().unwrap_or_else(|_| String::from("Unknown OS version"));
         let hostname = hostname().unwrap_or_else(|_| String::from("Unknown Hostname"));
         let logged_in_user = get_user_by_uid(get_current_uid()).unwrap();
@@ -90,8 +90,8 @@ impl State {
                 device_name: hostname,
                 manufacturer: "Computer".to_string(),
                 model: "Computer".to_string(),
-                os_name: os.to_string(),
-                os_version: os_version.to_string(),
+                os_name,
+                os_version,
                 supports_encryption: false,
             },
             webhook_info: WebhookInfo {
