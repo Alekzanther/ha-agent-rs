@@ -14,6 +14,16 @@ Imagine having an automated party mode that kicks in when your webcam turns off,
 
 I see I've piqued your interest! Here's how you can join in on the fun:
 
+### Method 1: Install from crates.io
+
+This method is super easy. Open your terminal and type:
+
+```shell
+cargo install ha-agent-rs
+```
+
+### Method 2: Build from GitHub
+
 **Step 1:** Clone this repository. It's as simple as:
 
 ```shell
@@ -38,6 +48,24 @@ Then fill it in with your actual data. No peeking, please!
 ```shell
 cargo run
 ```
+### Configuration
+
+In order to run it you need to supply it with the URL and long lived access token. Here are 3 different methods:
+
+```Command line arguments
+export HASS_URL="your_home_assistant_url"
+export HASS_TOKEN="your_home_assistant_token"
+```
+
+```Command line arguments
+ha-agent-rs --url "your_home_assistant_url" --token "your_home_assistant_token"
+```
+
+```.env file
+cp .env-example .env
+```
+
+For more information on how to retrieve a long lived access token, see https://www.home-assistant.io/docs/authentication/#your-account-profile .
 
 ## What's Next? 🚀
 
