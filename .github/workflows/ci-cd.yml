@@ -22,6 +22,15 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - name: Check if version changed
+      id: check-version
+      run: |
+        if git diff HEAD~1..HEAD -- Cargo.toml | grep -q "^+version = \"[0-9]\+\.[0-9]\+\.[0-9]\+\""
+        then
+          echo "::set-output name=changed::true"
+        else
+          echo "::set-output name=changed::false"
+        fi
     - name: Publish to crates.io
       run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.check-version.outputs.changed == 'true'
