@@ -6,7 +6,7 @@ Hello there, code wranglers, digital cowboys, and Internet dwellers! Welcome to 
 
 Grab a chair, my friend! `ha-agent-rs` is a high-octane, Rust-infused concoction that I mixed up in my virtual code-lab. It's like the secret sauce in your favorite sandwich, but for Home Assistant.
 
-At its core, `ha-agent-rs` is a beautiful, albeit slightly mad, piece of work that communicates the state of your webcam and microphone to your Home Assistant setup. It's currently at its adorable fledgling stage, version 0.1.0, but it works like a charm (on Linux).
+At its core, `ha-agent-rs` is a beautiful, albeit slightly mad, piece of work that communicates the state of your webcam and microphone to your Home Assistant setup. It's currently at its adorable fledgling stage, version 0.x, but it works like a charm (on Linux).
 
 Imagine having an automated party mode that kicks in when your webcam turns off, or a "Do Not Disturb" sign that lights up when your mic is active. `ha-agent-rs` makes it possible, because it loves nothing more than to keep a watchful eye on your mic and webcam and report back to Home Assistant. Talk about loyalty, eh?
 
