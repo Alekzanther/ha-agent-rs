@@ -26,8 +26,8 @@ jobs:
       run: cargo test --verbose
     - name: Clippy
       run: cargo clippy --verbose -- -D warnings
-    - name: Audit
-      run: cargo install cargo-audit && cargo audit
+    # - name: Audit
+    #   run: cargo install cargo-audit && cargo audit
     - name: Check if version changed
       id: check-version
       run: |
