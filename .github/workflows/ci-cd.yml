@@ -22,8 +22,12 @@ jobs:
       run: cp .env-example .env
     - name: Build
       run: cargo build --verbose
-    - name: Run tests
+    - name: Test
       run: cargo test --verbose
+    - name: Clippy
+      run: cargo test --verbose -- -D warnings
+    - name: Audit
+      run: cargo install cargo-audit && cargo audit
     - name: Check if version changed
       id: check-version
       run: |
