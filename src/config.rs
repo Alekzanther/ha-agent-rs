@@ -57,15 +57,17 @@ mod tests {
     use super::*;
     use std::env;
 
+    static TEST_URL_STRING: &str = "https://test.com";
+
     #[test]
     fn test_load_config_with_env_variables() {
-        env::set_var("HASS_URL", "https://example.com");
+        env::set_var("HASS_URL", TEST_URL_STRING);
         env::set_var("HASS_TOKEN", "token");
         env::set_var("HAARS_FILE", "file.json");
 
         let config = load_config();
 
-        assert_eq!(config.hass_url, url::Url::parse("https://example.com").expect("Failed to parse url"));
+        assert_eq!(config.hass_url, url::Url::parse(TEST_URL_STRING).expect("Failed to parse url"));
         assert_eq!(config.hass_token, "token");
         assert_eq!(config.state_file, "file.json");
     }
@@ -78,7 +80,7 @@ mod tests {
         // an `Args` struct directly, so you can control the inputs in a test.
         let args = vec![
             "program", 
-            "--url", "https://example.com", 
+            "--url", TEST_URL_STRING, 
             "--token", "token",
             "--state-file", "file.json",
         ];
@@ -86,7 +88,7 @@ mod tests {
 
         let config = load_config();
 
-        assert_eq!(config.hass_url, url::Url::parse("https://example.com").expect("Failed to parse url"));
+        assert_eq!(config.hass_url, url::Url::parse(TEST_URL_STRING).expect("Failed to parse url"));
         assert_eq!(config.hass_token, "token");
         assert_eq!(config.state_file, "file.json");
     }
