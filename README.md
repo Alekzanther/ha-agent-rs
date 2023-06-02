@@ -27,7 +27,7 @@ cargo install ha-agent-rs
 **Step 1:** Clone this repository. It's as simple as:
 
 ```shell
-git clone https://github.com/yourusername/ha-agent-rs.git
+git clone https://github.com/alekzanther/ha-agent-rs.git
 ```
 
 **Step 2:** Move to the project directory:
