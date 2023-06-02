@@ -9,15 +9,15 @@ documentation = "https://github.com/alekzanther/ha-agent-rs"
 
 [dependencies]
 async-tungstenite = { version = "0.19.0", features=["tokio-runtime","tokio-native-tls"]}
-reqwest = { version = "0.11.13", features = ["json"]}
+reqwest = { version = "0.11.18", features = ["json"]}
 futures = "0.3"
-anyhow = "1.0.68"
-tokio = { version = "1.24.1", features = ["full"]}
+anyhow = "1.0.71"
+tokio = { version = "1.28.2", features = ["full"]}
 tokio-native-tls = { version = "0.3.1" }
 url = "2.3.1"
 dotenv = "0.15.0"
 dotenv_codegen = "0.15.0"
-serde_json = "1.0.91"
+serde_json = "1.0.96"
 inotify = "0.10.0"
 serde = { version = "1.0.163", features = ["derive"]}
 sys-info = "0.9.1"
