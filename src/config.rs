@@ -51,3 +51,43 @@ pub fn load_config() -> Config {
         state_file,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn test_load_config_with_env_variables() {
+        env::set_var("HASS_URL", "https://example.com");
+        env::set_var("HASS_TOKEN", "token");
+        env::set_var("HAARS_FILE", "file.json");
+
+        let config = load_config();
+
+        assert_eq!(config.hass_url, url::Url::parse("https://example.com").expect("Failed to parse url"));
+        assert_eq!(config.hass_token, "token");
+        assert_eq!(config.state_file, "file.json");
+    }
+
+    #[test]
+    fn test_load_config_with_command_line_args() {
+        // Note: Setting args directly like this is not generally possible.
+        // This example is meant to demonstrate the principle. In real-life,
+        // you might need to modify your `load_config()` function to accept
+        // an `Args` struct directly, so you can control the inputs in a test.
+        let args = vec![
+            "program", 
+            "--url", "https://example.com", 
+            "--token", "token",
+            "--state-file", "file.json",
+        ];
+        env::set_var("ARGS", args.join(" "));
+
+        let config = load_config();
+
+        assert_eq!(config.hass_url, url::Url::parse("https://example.com").expect("Failed to parse url"));
+        assert_eq!(config.hass_token, "token");
+        assert_eq!(config.state_file, "file.json");
+    }
+}

@@ -4,7 +4,7 @@ use std::io::Error;
 use sys_info::{hostname, os_release, os_type};
 use users::{get_current_uid, get_user_by_uid};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Device {
     pub device_id: String,
     pub app_id: String,
@@ -18,14 +18,14 @@ pub struct Device {
     pub supports_encryption: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Sensor {
     #[serde(flatten)]
     pub state: SensorState,
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SensorState {
     #[serde(rename = "state")]
     pub value: bool,
@@ -35,7 +35,7 @@ pub struct SensorState {
     pub icon: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct WebhookInfo {
     pub cloudhook_url: Option<String>,
     pub remote_ui_url: Option<String>,
@@ -43,7 +43,7 @@ pub struct WebhookInfo {
     pub webhook_id: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct State {
     pub registered: bool,
     pub device: Device,
@@ -132,5 +132,59 @@ impl State {
             }
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_new_state() {
+        let state = State::new();
+
+        assert_eq!(state.registered, false);
+        assert_eq!(state.device.device_id.contains('@'), true);
+        assert_eq!(state.device.app_id, "ha-agent-rs");
+        assert_eq!(state.device.app_name, "Home Assistant Agent");
+        assert_eq!(state.sensors.len(), 2);
+        assert_eq!(state.sensors[0].name, "Webcam");
+        assert_eq!(state.sensors[1].name, "Microphone");
+    }
+
+    #[test]
+    fn test_init_state_with_empty_path() {
+        let state = State::init("");
+
+        assert_eq!(state.registered, false);
+        assert_eq!(state.device.device_id.contains('@'), true);
+        assert_eq!(state.device.app_id, "ha-agent-rs");
+        assert_eq!(state.device.app_name, "Home Assistant Agent");
+        assert_eq!(state.sensors.len(), 2);
+        assert_eq!(state.sensors[0].name, "Webcam");
+        assert_eq!(state.sensors[1].name, "Microphone");
+    }
+
+    #[test]
+    fn test_save_and_load_state() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("state.json");
+        let state = State::new();
+
+        state.save_state(file_path.to_str().unwrap()).unwrap();
+
+        let loaded_state = State::load_state(file_path.to_str().unwrap()).unwrap();
+
+        assert_eq!(state, loaded_state);
+    }
+
+    #[test]
+    fn test_get_sensor_by_unique_id() {
+        let state = State::new();
+
+        assert!(state.get_sensor_by_unique_id("webcam").is_some());
+        assert!(state.get_sensor_by_unique_id("microphone").is_some());
+        assert!(state.get_sensor_by_unique_id("nonexistent").is_none());
     }
 }
