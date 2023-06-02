@@ -19,8 +19,6 @@ jobs:
       with:
         fetch-depth: 2
     - uses: Swatinem/rust-cache@v2
-    - name: Set up .env
-      run: cp .env-example .env
     - name: Build
       run: cargo build --verbose
     - name: Test
