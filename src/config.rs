@@ -29,7 +29,7 @@ pub fn load_config() -> Config {
     let hass_url_str = args
         .hass_url
         .or_else(|| env::var("HASS_URL").ok())
-        .or_else(|| dotenv::var("HASS_URL").ok()).expect("HASS_TOKEN is required");
+        .or_else(|| dotenv::var("HASS_URL").ok()).expect("HASS_URL is required");
 
     let hass_url = url::Url::parse(&hass_url_str).expect("Failed to parse HASS_URL");
 
@@ -64,27 +64,6 @@ mod tests {
         env::set_var("HASS_URL", TEST_URL_STRING);
         env::set_var("HASS_TOKEN", "token");
         env::set_var("HAARS_FILE", "file.json");
-
-        let config = load_config();
-
-        assert_eq!(config.hass_url, url::Url::parse(TEST_URL_STRING).expect("Failed to parse url"));
-        assert_eq!(config.hass_token, "token");
-        assert_eq!(config.state_file, "file.json");
-    }
-
-    #[test]
-    fn test_load_config_with_command_line_args() {
-        // Note: Setting args directly like this is not generally possible.
-        // This example is meant to demonstrate the principle. In real-life,
-        // you might need to modify your `load_config()` function to accept
-        // an `Args` struct directly, so you can control the inputs in a test.
-        let args = vec![
-            "program", 
-            "--url", TEST_URL_STRING, 
-            "--token", "token",
-            "--state-file", "file.json",
-        ];
-        env::set_var("ARGS", args.join(" "));
 
         let config = load_config();
 
