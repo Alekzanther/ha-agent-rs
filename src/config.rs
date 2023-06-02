@@ -57,7 +57,7 @@ mod tests {
     use super::*;
     use std::env;
 
-    static TEST_URL_STRING: &str = "https://test.com";
+    const TEST_URL_STRING: &str = "https://test.com";
 
     #[test]
     fn test_load_config_with_env_variables() {
